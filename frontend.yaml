@@ -4,7 +4,7 @@ metadata:
   name: frontend
   namespace: default
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: frontend
@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: vencce/frontend-devops:latest
+          image: vencce/frontend-devops:v2
           ports:
             - containerPort: 80
 ---
