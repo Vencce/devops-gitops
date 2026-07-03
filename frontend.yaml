@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: vencce/frontend-devops:691d96bb823d83279ae0427cc3b820b68445091e
+          image: vencce/frontend-devops:e87d6ef2006970b78eb1c7d3774f710e39e80348
           ports:
             - containerPort: 80
 ---
