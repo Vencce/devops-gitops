@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: vencce/backend-devops:latest
+          image: vencce/backend-devops:488a7ece84dfd7a8afebc19ddce1ffbb1cb22bc5
           env:
             - name: DB_HOST
               value: db
