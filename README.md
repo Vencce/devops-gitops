@@ -11,6 +11,7 @@ O ecossistema foi desenhado para ser resiliente, descentralizado e escalável, u
 *   **Frontend:** HTML, CSS e JavaScript
 *   **Backend:** API em Python
 *   **Banco de Dados:** PostgreSQL 15-alpine
+*   **Visualização de Banco:** Adminer
 *   **Infraestrutura como Código (IaC):** Terraform
 *   **Orquestração de Contêineres:** Kubernetes (distribuição K3s)
 *   **Ingress Controller:** Traefik
@@ -29,22 +30,25 @@ Toda a infraestrutura base foi provisionada de forma automatizada na AWS utiliza
 
 ## 🔄 Pipeline de Integração e Entrega (CI/CD)
 
-O deploy obedece rigorosamente ao paradigma **GitOps**, onde este repositório atua como a única fonte da verdade (*Single Source of Truth*) para o ambiente de produção.
+O deploy obedece rigorosamente ao paradigma **GitOps**, onde este repositório atua como a única fonte da verdade para o ambiente de produção.
 
-1.  **Desenvolvimento:** O código é desenvolvido e enviado para a branch `main` dos repositórios da aplicação (frontend ou backend).
-2.  **Integração Contínua (CI):** O GitHub Actions intercepta o evento, constrói uma nova imagem Docker otimizada e a envia para o Docker Hub. O versionamento ocorre utilizando o hash único do commit.
-3.  **Gestão de Manifestos:** A mesma Action acessa este repositório de infraestrutura de forma segura (via *Personal Access Token*) e modifica o arquivo YAML, atualizando a tag da imagem em produção.
-4.  **Entrega Contínua (CD):** O ArgoCD, rodando internamente no cluster K3s, identifica a alteração nos arquivos do GitHub. Ele inicia o sincronismo automático (*Auto-Sync*), substituindo os contêineres antigos pela nova versão gradativamente.
+1.  **Desenvolvimento:** O código é desenvolvido e enviado para a branch `main` dos repositórios da aplicação.
+2.  **Integração Contínua (CI):** O GitHub Actions intercepta o evento, constrói uma nova imagem Docker otimizada e a envia para o Docker Hub.
+3.  **Gestão de Manifestos:** A Action acessa este repositório de infraestrutura de forma segura e modifica o arquivo YAML, atualizando a tag da imagem em produção.
+4.  **Entrega Contínua (CD):** O ArgoCD, rodando internamente no cluster K3s, identifica a alteração nos arquivos do GitHub e inicia o sincronismo automático.
 
 ---
 
 ## 🌐 Acesso aos Serviços
 
-O roteamento externo para os serviços internos do Kubernetes é gerenciado pelo Traefik, que divide o tráfego com base nas rotas de URL, utilizando o IP público dinâmico gerado pelo Terraform:
+O roteamento externo para os serviços internos do Kubernetes é gerenciado pelo Traefik. Por questões de segurança, ferramentas administrativas são acessadas via túnel local (port-forward).
 
 *   **Interface de Usuário:** `http://<IP-DO-CONTROL-PLANE>/`
 *   **Endpoints da API:** `http://<IP-DO-CONTROL-PLANE>/api`
-*   **Dashboard do ArgoCD:** `https://<IP-DO-CONTROL-PLANE>:30080` *(Acesso via porta NodePort, exige permissão no navegador para certificado não verificado).*
+*   **Dashboard do ArgoCD:** `https://<IP-DO-CONTROL-PLANE>:30080`
+*   **Adminer (Banco de Dados):** Conexão via túnel seguro na porta 8082. Execute no terminal do servidor:
+    `sudo k3s kubectl port-forward svc/adminer 8082:8080 --address 0.0.0.0`
+    Acesso no navegador: `http://<IP-DO-CONTROL-PLANE>:8082`
 
 ---
 
