@@ -1,63 +1,60 @@
-Trabalho Final - Fundamentos de DevOps
+# 🚀 Infraestrutura Automática e Deploy Contínuo (GitOps)
 
-Aluno: Vitor Ferreira
-Curso: Bacharelado em Sistemas de Informação (5º Período) - Instituto Federal Catarinense (Campus Araquari)
-Disciplina: Fundamentos de DevOps
+Este repositório documenta a arquitetura e a implementação da infraestrutura em nuvem para o projeto prático da disciplina de Fundamentos de DevOps do Instituto Federal Catarinense (IFC - Campus Araquari). O ambiente hospeda uma aplicação Full-Stack e utiliza práticas modernas de automação para garantir entregas contínuas com zero downtime.
 
-1. Introdução
-Este projeto consiste no desenvolvimento de uma infraestrutura automatizada e na implementação de uma esteira de deploy contínuo utilizando práticas GitOps. O objetivo é subir uma aplicação (Backend em Python, Frontend em HTML/CSS/JS e Banco de Dados PostgreSQL) garantindo alta disponibilidade, automação e roteamento reverso.
+---
 
-2. Escolha do Ambiente
-Ambiente: Nuvem (AWS Learner Lab).
+## 🏗️ Arquitetura e Stack Tecnológico
 
-Justificativa: A nuvem proporciona flexibilidade, escalabilidade sob demanda e integração perfeita com ferramentas de Infraestrutura como Código (IaC).
+O ecossistema foi desenhado para ser resiliente, descentralizado e escalável, utilizando as seguintes tecnologias:
 
-Instâncias Criadas: Foram provisionadas 4 instâncias EC2 rodando Ubuntu:
+*   **Frontend:** HTML, CSS e JavaScript
+*   **Backend:** API em Python
+*   **Banco de Dados:** PostgreSQL 15-alpine
+*   **Infraestrutura como Código (IaC):** Terraform
+*   **Orquestração de Contêineres:** Kubernetes (distribuição K3s)
+*   **Ingress Controller:** Traefik
+*   **Automação (CI/CD):** GitHub Actions & ArgoCD
 
-Control Plane: Responsável pelo gerenciamento do cluster (Master).
+---
 
-Workers (3 instâncias): Nós de trabalho para execução dos contêineres.
+## ☁️ Topologia Cloud (AWS Learner Lab)
 
-3. Provisionamento
-Ferramentas: Terraform (para criação da infraestrutura, provisionamento das instâncias EC2 e configuração dos Security Groups na AWS).
+Toda a infraestrutura base foi provisionada de forma automatizada na AWS utilizando Terraform. O cluster Kubernetes opera sobre quatro instâncias EC2 com Ubuntu:
 
-Desafios e Soluções: O gerenciamento do ambiente no AWS Learner Lab exige lidar com a renovação de credenciais e IPs dinâmicos a cada nova sessão, o que foi mitigado pelo uso de variáveis de ambiente no terminal e aplicação direta das saídas (outputs) do Terraform para conexão SSH.
+*   **1x Control Plane (`t2.medium`):** Nó principal que gerencia o estado do cluster, orquestra os agendamentos e recebe o tráfego externo primário.
+*   **3x Worker Nodes (`t2.micro`):** Nós de trabalho dedicados exclusivamente à execução e processamento dos pods da aplicação e do banco de dados.
 
-4. Cluster Kubernetes
-Ferramenta: Utilizou-se o K3s por ser uma distribuição leve do Kubernetes, ideal para ambientes de estudo e produção com recursos otimizados.
+---
 
-Configuração: O cluster possui 1 Control Plane e 3 Workers integrados. O roteamento de entrada é feito nativamente pelo Ingress Controller Traefik.
+## 🔄 Pipeline de Integração e Entrega (CI/CD)
 
-5. GitOps com ArgoCD
-Instalação: O ArgoCD foi implantado diretamente no cluster K3s.
+O deploy obedece rigorosamente ao paradigma **GitOps**, onde este repositório atua como a única fonte da verdade (*Single Source of Truth*) para o ambiente de produção.
 
-Estratégia GitOps: A ferramenta monitora um repositório exclusivo para infraestrutura (devops-gitops). Qualquer alteração nos manifestos YAML de Deployment e Service reflete automaticamente no cluster através das políticas de Auto-Sync, Prune e Self-Heal, garantindo que o estado do cluster seja sempre idêntico ao versionado no Git.
+1.  **Desenvolvimento:** O código é desenvolvido e enviado para a branch `main` dos repositórios da aplicação (frontend ou backend).
+2.  **Integração Contínua (CI):** O GitHub Actions intercepta o evento, constrói uma nova imagem Docker otimizada e a envia para o Docker Hub. O versionamento ocorre utilizando o hash único do commit.
+3.  **Gestão de Manifestos:** A mesma Action acessa este repositório de infraestrutura de forma segura (via *Personal Access Token*) e modifica o arquivo YAML, atualizando a tag da imagem em produção.
+4.  **Entrega Contínua (CD):** O ArgoCD, rodando internamente no cluster K3s, identifica a alteração nos arquivos do GitHub. Ele inicia o sincronismo automático (*Auto-Sync*), substituindo os contêineres antigos pela nova versão gradativamente.
 
-6. Integração Contínua e Entrega Contínua (CI/CD)
-Foi implementada uma esteira completa utilizando GitHub Actions para elevar o nível de automação:
+---
 
-Automação (CI): Sempre que um novo código é enviado para a branch principal (main) dos repositórios da aplicação, o workflow dispara automaticamente o build da nova imagem Docker e realiza o push versionado para o Docker Hub.
+## 🌐 Acesso aos Serviços
 
-Automação (CD): No mesmo fluxo, a Action acessa o repositório GitOps e atualiza automaticamente a tag da imagem no arquivo YAML correspondente.
+O roteamento externo para os serviços internos do Kubernetes é gerenciado pelo Traefik, que divide o tráfego com base nas rotas de URL, utilizando o IP público dinâmico gerado pelo Terraform:
 
-Segurança: Utilizou-se GitHub Secrets para armazenar as credenciais (DOCKER_USERNAME, DOCKER_PASSWORD) e o token de acesso pessoal (PAT_TOKEN), garantindo a comunicação segura entre os repositórios sem expor dados sensíveis.
+*   **Interface de Usuário:** `http://<IP-DO-CONTROL-PLANE>/`
+*   **Endpoints da API:** `http://<IP-DO-CONTROL-PLANE>/api`
+*   **Dashboard do ArgoCD:** `https://<IP-DO-CONTROL-PLANE>:30080` *(Acesso via porta NodePort, exige permissão no navegador para certificado não verificado).*
 
-7. Aplicação e Acesso
-A aplicação é dividida em microsserviços interligados:
+---
 
-Backend: API em Python, operando na porta 8000 internamente.
+## 💡 Desafios e Soluções
 
-Frontend: Interface em HTML/CSS/JS, operando na porta 80 internamente.
+A transição de um ambiente de desenvolvimento isolado para uma arquitetura distribuída exigiu adaptações estruturais. 
 
-Banco de Dados: PostgreSQL 15-alpine (porta 5432).
+O principal desafio superado envolveu a comunicação entre a interface web e a API. Durante o desenvolvimento, o frontend consumia dados via `localhost`. Na arquitetura em nuvem, foi necessário mapear e configurar corretamente o Ingress Controller (Traefik) para capturar o tráfego HTTP na porta 80 e rotear inteligentemente qualquer requisição com o prefixo `/api` para os contêineres do backend em Python, garantindo o funcionamento do sistema sem erros de CORS ou rotas perdidas.
 
-Como Acessar (Roteamento via Ingress):
+---
 
-Frontend: http://<IP-DO-CONTROL-PLANE>/
-
-Backend (API): http://<IP-DO-CONTROL-PLANE>/api
-
-ArgoCD (Painel de Gerenciamento): https://<IP-DO-CONTROL-PLANE>:30080 (Exposto via NodePort).
-
-8. Conclusão
-O desenvolvimento do projeto consolidou a importância de tratar a infraestrutura como código (IaC) e a eficácia do paradigma GitOps na modernização do ciclo de vida do software. Um dos principais desafios técnicos superados envolveu a transição do ambiente de desenvolvimento local para a nuvem, exigindo o ajuste das requisições do frontend (que inicialmente apontavam para o localhost da máquina) para que passassem a utilizar o roteamento dinâmico correto do Traefik apontando para a API no cluster. A implementação de uma esteira completa de CI/CD (GitHub Actions + ArgoCD) permitiu um fluxo de trabalho profissional, onde cada alteração no código é construída, versionada e implantada de forma totalmente autônoma, resultando em um processo de entrega contínua sem interrupção de serviço (Zero Downtime).
+**Autor:** Vitor Ferreira  
+**Formação:** Bacharelado em Sistemas de Informação (5º Período)
