@@ -46,9 +46,6 @@ O roteamento externo para os serviços internos do Kubernetes é gerenciado pelo
 *   **Interface de Usuário:** `http://<IP-DO-CONTROL-PLANE>/`
 *   **Endpoints da API:** `http://<IP-DO-CONTROL-PLANE>/api`
 *   **Dashboard do ArgoCD:** `https://<IP-DO-CONTROL-PLANE>:30080`
-*   **Adminer (Banco de Dados):** Conexão via túnel seguro na porta 8082. Execute no terminal do servidor:
-    `sudo k3s kubectl port-forward svc/adminer 8082:8080 --address 0.0.0.0`
-    Acesso no navegador: `http://<IP-DO-CONTROL-PLANE>:8082`
 
 ---
 
